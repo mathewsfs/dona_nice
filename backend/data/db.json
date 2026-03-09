@@ -1,48 +1,6 @@
 {
-  "products": [
-    {
-      "name": "Brownie simples 80g",
-      "price": 6,
-      "id": "1772848975406"
-    },
-    {
-      "name": "Brownie cobertura 80g",
-      "price": 7.5,
-      "id": "1772908561917"
-    },
-    {
-      "name": "Salgadinho de cebola 100g",
-      "price": 5,
-      "id": "1772993213611"
-    },
-    {
-      "name": "Salgadinho de queijo 100g",
-      "price": 5,
-      "id": "1772993833258"
-    },
-    {
-      "name": "Donuts",
-      "price": 3,
-      "id": "1772993854446"
-    },
-    {
-      "name": "Frutinha 15g",
-      "price": 2.5,
-      "id": "1772993863933"
-    }
-  ],
-  "customers": [
-    {
-      "id": "c1",
-      "name": "Maria",
-      "phone": "11987654321"
-    },
-    {
-      "id": "c2",
-      "name": "João",
-      "phone": "11987654322"
-    }
-  ],
+  "products": [],
+  "customers": [],
   "orders": [],
   "settings": {
     "theme": "light",
@@ -55,25 +13,11 @@
   },
   "users": [
     {
-      "id": "admin-001",
-      "username": "admin",
-      "password": "$2b$10$njBVpcN6SgNirQS6YC19w.VhO1IYtgxGQWOXN.vZpjDInGXCV1abG",
-      "name": "Administrator",
-      "createdAt": "2026-03-08T00:00:00Z"
-    },
-    {
       "id": "donanice-002",
       "username": "donanice",
       "password": "$2b$10$.Ki8x.ZOOEPrLJIeESUmC.9NcRrjoIv05xXfFa3yF3ZdTsTfKSgRm",
       "name": "Dona Nice",
       "createdAt": "2026-03-03T00:00:00Z"
-    },
-    {
-      "id": "test-003",
-      "username": "test",
-      "password": "$2b$10$a2vCinVV8kkdwlQy/C35POLqrmjikhESzY54soKcpzVosD0dRkDJq",
-      "name": "Test User",
-      "createdAt": "2026-03-07T00:00:00Z"
     }
   ]
 }

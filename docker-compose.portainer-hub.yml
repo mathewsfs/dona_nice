@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  dona-nice-app:
+    image: seudockerid/dona-nice-app:latest
+    container_name: dona-nice-app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - FRONTEND_URL=https://donanice.fluxora.space
+    volumes:
+      - dona-nice-data:/app/data
+      - dona-nice-logs:/var/log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  dona-nice-data:
+    driver: local
+  dona-nice-logs:
+    driver: local
+
+networks:
+  default:
+    name: dona-nice-network
