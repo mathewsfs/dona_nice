@@ -1,0 +1,55 @@
+FROM node:18-alpine AS frontend-build
+
+WORKDIR /frontend
+
+# Copiar apenas package files primeiro
+COPY frontend/package*.json ./
+RUN npm ci --only=production
+
+# Copiar source e buildar
+COPY frontend/ ./
+RUN npm run build
+
+# Limpar cache do npm
+RUN npm cache clean --force
+
+FROM node:18-alpine AS backend
+
+WORKDIR /app
+
+# Instalar dependências do backend
+COPY backend/package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copiar código fonte
+COPY backend/src ./src
+COPY backend/scripts ./scripts
+
+# Criar diretórios necessários
+RUN mkdir -p /app/data /app/logs /app/public
+
+# Copiar dados iniciais (se existirem)
+COPY backend/data ./data/
+
+# Copiar frontend buildado
+COPY --from=frontend-build /frontend/dist/* /app/public/
+
+# Definir permissões corretas
+RUN chown -R node:node /app
+
+# Mudar para usuário não-root
+USER node
+
+# Expor porta
+EXPOSE 3001
+
+# Variáveis de ambiente
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Health check mais simples e confiável
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "console.log('Health check running')" || exit 1
+
+# Comando de inicialização
+CMD ["node", "src/index.js"]

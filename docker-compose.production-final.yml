@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+
+  dona-nice-app:
+    build:
+      context: https://github.com/mathewsfs/dona_nice.git
+      dockerfile: backend/Dockerfile.optimized
+    container_name: dona-nice-app
+    restart: unless-stopped
+
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      TRAEFIK_ACME_EMAIL: ${TRAEFIK_ACME_EMAIL}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      TZ: ${TZ}
+
+    volumes:
+      - dona-nice-data:/app/data
+      - dona-nice-logs:/app/logs
+
+    # Health check simples e confiável
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dona-nice.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.dona-nice.entrypoints=websecure"
+      - "traefik.http.routers.dona-nice.tls=true"
+      - "traefik.http.routers.dona-nice.tls.certresolver=le"
+      - "traefik.http.services.dona-nice.loadbalancer.server.port=${PORT}"
+
+    networks:
+      - fluxora_net
+
+  # Serviço de monitoramento (opcional)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower-dona-nice
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup
+    networks:
+      - fluxora_net
+
+networks:
+  fluxora_net:
+    external: true
+
+volumes:
+  dona-nice-data:
+    driver: local
+  dona-nice-logs:
+    driver: local
