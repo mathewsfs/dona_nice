@@ -1,0 +1,512 @@
+﻿import React, { useEffect, useState } from 'react'
+
+// Types
+
+type Order = {
+  id: string
+  customerName: string
+  total: number
+  paid: boolean
+  date?: string
+}
+
+type Product = { id: string; name: string; price: number }
+
+type Settings = { theme?: string; whatsapp_webhook?: string }
+
+enum View {
+  Home = 'inicio',
+  Orders = 'pedidos',
+  Billing = 'cobrancas',
+  Products = 'produtos',
+  Settings = 'configuracoes',
+}
+
+// Modal states
+type ModalType = 'edit-product' | null
+
+export default function App() {
+  const [view, setView] = useState<View>(View.Home)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [stats, setStats] = useState<{ orders: number; earnings: number }>({
+    orders: 0,
+    earnings: 0,
+  })
+  const [settings, setSettings] = useState<Settings>({})
+  const [loading, setLoading] = useState(false)
+  
+  // Product form states
+  const [productName, setProductName] = useState('')
+  const [productPrice, setProductPrice] = useState(0)
+  
+  // Settings form states
+  const [theme, setTheme] = useState('baby-pink')
+  const [webhook, setWebhook] = useState('')
+  
+  // Modal states
+  const [modalOpen, setModalOpen] = useState<ModalType>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editPrice, setEditPrice] = useState(0)
+
+  useEffect(() => {
+    if (view === View.Orders) {
+      setLoading(true)
+      fetch('/api/orders')
+        .then((r) => r.json())
+        .then(setOrders)
+        .finally(() => setLoading(false))
+    }
+    if (view === View.Products) {
+      fetch('/api/products')
+        .then((r) => r.json())
+        .then(setProducts)
+    }
+    if (view === View.Home) {
+      fetch('/api/stats')
+        .then((r) => r.json())
+        .then(setStats)
+    }
+  }, [view])
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        setSettings(data)
+        setTheme(data.theme || 'baby-pink')
+        setWebhook(data.whatsapp_webhook || '')
+      })
+  }, [])
+  
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme)
+  }, [theme])
+
+  const openWhatsApp = () => {
+    const pending = orders.filter((o) => !o.paid)
+    if (pending.length === 0) {
+      alert('Nenhuma pendência.')
+      return
+    }
+    const lines = pending.map(
+      (o) => `Pedido ${o.id}: R$ ${o.total.toFixed(2)}`
+    )
+    lines.push(
+      `Total pendente: R$ ${pending
+        .reduce((s, o) => s + o.total, 0)
+        .toFixed(2)}`
+    )
+    const text = encodeURIComponent(lines.join('\n'))
+    window.open(`https://wa.me/?text=${text}`, '_blank')
+  }
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product)
+    setEditName(product.name)
+    setEditPrice(product.price)
+    setModalOpen('edit-product')
+  }
+  
+  const closeModal = () => {
+    setModalOpen(null)
+    setEditingProduct(null)
+    setEditName('')
+    setEditPrice(0)
+  }
+  
+  const updateProduct = () => {
+    if (!editingProduct || !editName.trim() || editPrice <= 0) {
+      alert('Preencha nome e preço válidos')
+      return
+    }
+    
+    fetch(`/api/products/${editingProduct.id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: editName, price: editPrice }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then((updatedProduct) => {
+        setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p))
+        closeModal()
+        alert('Produto atualizado com sucesso!')
+      })
+      .catch((err) => {
+        console.error('Erro ao atualizar produto:', err)
+        alert(`Erro ao atualizar produto: ${err.message}`)
+      })
+  }
+  
+  const deleteProduct = (product: Product) => {
+    if (!confirm(`Tem certeza que deseja excluir "${product.name}"?`)) {
+      return
+    }
+    
+    fetch(`/api/products/${product.id}`, {
+      method: 'DELETE',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then(() => {
+        setProducts(products.filter(p => p.id !== product.id))
+        alert('Produto excluído com sucesso!')
+      })
+      .catch((err) => {
+        console.error('Erro ao excluir produto:', err)
+        alert(`Erro ao excluir produto: ${err.message}`)
+      })
+  }
+
+  const deleteOrder = (order: Order) => {
+    if (!confirm(`Tem certeza que deseja excluir o pedido de "${order.customerName}" no valor de R$ ${order.total.toFixed(2)}?`)) {
+      return
+    }
+    
+    fetch(`/api/orders/${order.id}`, {
+      method: 'DELETE',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then(() => {
+        setOrders(orders.filter(o => o.id !== order.id))
+        alert('Pedido excluído com sucesso!')
+      })
+      .catch((err) => {
+        console.error('Erro ao excluir pedido:', err)
+        alert(`Erro ao excluir pedido: ${err.message}`)
+      })
+  }
+  
+  const toggleOrderPaid = (order: Order) => {
+    fetch(`/api/orders/${order.id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ paid: !order.paid }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then((updatedOrder) => {
+        setOrders(orders.map(o => o.id === order.id ? updatedOrder : o))
+        alert(`Pedido marcado como ${!order.paid ? 'pago' : 'não pago'}!`)
+      })
+      .catch((err) => {
+        console.error('Erro ao atualizar pedido:', err)
+        alert(`Erro ao atualizar pedido: ${err.message}`)
+      })
+  }
+    const updated = { ...settings, ...data }
+    setSettings(updated)
+    fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+  }
+
+  const renderNav = () => (
+    <nav className="nav">
+      {[View.Home, View.Orders, View.Billing, View.Products, View.Settings].map((v) => {
+        const labels = {
+          [View.Home]: '🏠 Início',
+          [View.Orders]: '📋 Pedidos',
+          [View.Billing]: '💰 Cobranças',
+          [View.Products]: '🍰 Produtos',
+          [View.Settings]: '⚙️ Configurações'
+        }
+        return (
+          <button
+            key={v}
+            className={view === v ? 'active' : ''}
+            onClick={() => setView(v)}
+          >
+            {labels[v]}
+          </button>
+        )
+      })}
+    </nav>
+  )
+
+  const renderHome = () => (
+    <section className="card">
+      <h2>📊 Visão Geral do Mês</h2>
+      <div className="stats-grid">
+        <div className="stat-item">
+          <span className="stat-number">{stats.orders}</span>
+          <span className="stat-label">Pedidos</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-number">R$ {stats.earnings.toFixed(2)}</span>
+          <span className="stat-label">Faturamento</span>
+        </div>
+      </div>
+      <div className="quick-actions">
+        <button onClick={() => setView(View.Orders)} className="btn btn-secondary">
+          📋 Ver Pedidos
+        </button>
+        <button onClick={() => setView(View.Products)} className="btn btn-secondary">
+          🍰 Gerenciar Produtos
+        </button>
+      </div>
+    </section>
+  )
+
+  const renderOrders = () => (
+    <section className="card">
+      <h2>📋 Meus Pedidos</h2>
+      {loading ? (
+        <div className="loading">Carregando pedidos...</div>
+      ) : (
+        <ul className="orders">
+          {orders.map((o) => (
+            <li
+              key={o.id}
+              className={o.paid ? 'paid' : 'pending'}
+            >
+              <div>
+                <strong>{o.customerName}</strong>
+              </div>
+              <div>R$ {o.total.toFixed(2)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button onClick={openWhatsApp} className="btn">
+        💬 Enviar Cobrança via WhatsApp
+      </button>
+    </section>
+  )
+
+  const renderProducts = () => {
+    const addProduct = () => {
+      if (!productName.trim() || productPrice <= 0) {
+        alert('Preencha nome e preço válidos')
+        return
+      }
+      
+      console.log('Adicionando produto:', { name: productName, price: productPrice })
+      
+      fetch('/api/products', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: productName, price: productPrice }),
+      })
+        .then((response) => {
+          console.log('Response status:', response.status)
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+          return response.json()
+        })
+        .then((p) => {
+          console.log('Produto adicionado:', p)
+          // Recarregar lista de produtos do servidor
+          fetch('/api/products')
+            .then((r) => r.json())
+            .then((updatedProducts) => {
+              setProducts(updatedProducts)
+              setProductName('')
+              setProductPrice(0)
+              alert('Produto adicionado com sucesso!')
+            })
+        })
+        .catch((err) => {
+          console.error('Erro ao adicionar produto:', err)
+          alert(`Erro ao adicionar produto: ${err.message}`)
+        })
+    }
+    
+    return (
+      <section className="card">
+        <h2>🍰 Meus Produtos</h2>
+        {products.length === 0 ? (
+          <p className="empty-state">Nenhum produto cadastrado. Adicione seu primeiro produto!</p>
+        ) : (
+          <ul className="orders">
+            {products.map((p) => (
+              <li key={p.id} className="product-item">
+                <span className="product-name">{p.name}</span>
+                <span className="product-price">R$ {p.price.toFixed(2)}</span>
+                <div className="product-actions">
+                  <button 
+                    onClick={() => openEditModal(p)} 
+                    className="btn btn-sm btn-secondary"
+                    title="Editar produto"
+                  >
+                    ✏️
+                  </button>
+                  <button 
+                    onClick={() => deleteProduct(p)} 
+                    className="btn btn-sm btn-danger"
+                    title="Excluir produto"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="form">
+          <input
+            placeholder="Nome do produto"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            className="form-input"
+          />
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Preço em reais (R$)"
+            value={productPrice || ''}
+            onChange={(e) => setProductPrice(parseFloat(e.target.value) || 0)}
+            className="form-input"
+          />
+          <button onClick={addProduct} className="btn btn-primary">
+            ➕ Adicionar Produto
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  const getThemeName = (themeValue: string) => {
+    const themes = {
+      'baby-pink': '🌸 Rosa Bebê',
+      'blue': '💙 Azul',
+      'green': '💚 Verde',
+      'purple': '💜 Roxo'
+    }
+    return themes[themeValue as keyof typeof themes] || themeValue
+  }
+
+  const renderSettings = () => {
+    const saveSettings = () => {
+      changeSetting({ theme, whatsapp_webhook: webhook })
+      alert('Configurações salvas!')
+    }
+    
+    return (
+      <section className="card">
+        <h2>⚙️ Configurações do Sistema</h2>
+        <div className="form">
+          <div className="form-group">
+            <label htmlFor="theme">Tema do Aplicativo:</label>
+            <select
+              id="theme"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="form-select"
+            >
+              <option value="baby-pink">🌸 Rosa Bebê</option>
+              <option value="blue">💙 Azul</option>
+              <option value="green">💚 Verde</option>
+              <option value="purple">💜 Roxo</option>
+            </select>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="webhook">Webhook do WhatsApp:</label>
+            <input
+              id="webhook"
+              type="url"
+              placeholder="https://webhook.whatsapp.com/..."
+              value={webhook}
+              onChange={(e) => setWebhook(e.target.value)}
+              className="form-input"
+            />
+          </div>
+          
+          <button onClick={saveSettings} className="btn btn-primary">
+            💾 Salvar Configurações
+          </button>
+        </div>
+        
+        <div className="settings-info">
+          <h3>ℹ️ Informações Atuais</h3>
+          <p><strong>Tema:</strong> {settings.theme ? getThemeName(settings.theme) : 'Rosa Bebê'}</p>
+          <p><strong>Webhook WhatsApp:</strong> {settings.whatsapp_webhook ? '✅ Configurado' : '❌ Não configurado'}</p>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <div className="app-root">
+      <header className="header">
+        <h1>Dona Nice — Gestão</h1>
+      </header>
+      {renderNav()}
+      <main>
+        {view === View.Home && renderHome()}
+        {view === View.Orders && renderOrders()}
+        {view === View.Products && renderProducts()}
+        {view === View.Settings && renderSettings()}
+      </main>
+      <footer className="footer">
+        🧁 Dona Nice — Sistema de Gestão | Tema: {getThemeName(settings.theme || 'baby-pink')}
+      </footer>
+      
+      {/* Modal de Edição de Produto */}
+      {modalOpen === 'edit-product' && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>✏️ Editar Produto</h2>
+              <button className="modal-close" onClick={closeModal}>×</button>
+            </div>
+            <div className="form">
+              <div className="form-group">
+                <label htmlFor="edit-name">Nome do Produto:</label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Digite o nome do produto"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-price">Preço (R$):</label>
+                <input
+                  id="edit-price"
+                  type="number"
+                  step="0.01"
+                  value={editPrice || ''}
+                  onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                  placeholder="Digite o preço"
+                />
+              </div>
+              <div className="form-row">
+                <button onClick={closeModal} className="btn btn-secondary">
+                  Cancelar
+                </button>
+                <button onClick={updateProduct} className="btn btn-success">
+                  💾 Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - web
+    restart: unless-stopped
+
+  dona-nice:
+    image: seudockerid/dona-nice:latest
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - dona_nice_data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dona-nice.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.dona-nice.entrypoints=websecure
+      - traefik.http.routers.dona-nice.tls=true
+      - traefik.http.routers.dona-nice.tls.certresolver=le
+      - traefik.http.services.dona-nice.loadbalancer.server.port=3001
+    networks:
+      - web
+    restart: unless-stopped
+
+networks:
+  web:
+    name: web
+
+volumes:
+  traefik_letsencrypt:
+  dona_nice_data:

@@ -1,0 +1,39 @@
+{
+  "name": "Dona Nice Confeitaria — Gestão",
+  "short_name": "Dona Nice",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF0F5",
+  "theme_color": "#FFB6C1",
+  "orientation": "portrait",
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "gcm_sender_id": "",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Pedido",
+      "short_name": "Pedido",
+      "description": "Criar um novo pedido",
+      "url": "/?view=pedidos",
+      "icons": [{ "src": "/pwa-icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Cobranças",
+      "short_name": "Cobranças",
+      "description": "Ver cobranças pendentes",
+      "url": "/?view=cobrancas",
+      "icons": [{ "src": "/pwa-icon.svg", "sizes": "any" }]
+    }
+  ]
+}

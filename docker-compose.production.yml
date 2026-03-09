@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  dona-nice-app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/logs:/var/log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Serviço separado para o Cron Job (DESATIVADO)
+  # dona-nice-cron:
+  #   build:
+  #     context: .
+  #     dockerfile: backend/Dockerfile
+  #   command: ["sh", "-c", "while true; do sleep 3600; /app/scripts/check-due-payments.sh; done"]
+  #   environment:
+  #     - NODE_ENV=production
+  #     - API_URL=http://dona-nice-app:3001/api/cron/check-due-payments
+  #   volumes:
+  #     - ./backend/data:/app/data
+  #     - ./backend/logs:/var/log
+  #   depends_on:
+  #     dona-nice-app:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   # Não expor porta - serviço interno apenas
+
+  # Alternativa: Usar cron do host
+  # Para usar o cron do sistema operacional, descomente o serviço acima
+  # e adicione ao crontab do host:
+  # 0 * * * * curl -X POST http://localhost:3001/api/cron/check-due-payments -H "Content-Type: application/json" -d '{}'

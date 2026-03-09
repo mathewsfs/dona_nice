@@ -1,0 +1,20 @@
+# Crontab para Dona Nice App
+# Configuração para executar verificação de pagamentos pendentes a cada hora
+
+# Formato: MINUTO HORA DIA MES DIA_DA_SEMANA COMANDO
+# Exemplo: 0 * * * * /caminho/para/script.sh
+
+# Executar a cada hora, na hora cheia (00:00, 01:00, 02:00, etc.)
+0 * * * * /bin/bash /caminho/para/projeto/backend/scripts/check-due-payments.sh
+
+# Executar a cada 30 minutos (opcional - mais frequente)
+# */30 * * * * /bin/bash /caminho/para/projeto/backend/scripts/check-due-payments.sh
+
+# Executar apenas em horário comercial (8h às 18h, de segunda a sexta)
+# 0 8-18 * * 1-5 /bin/bash /caminho/para/projeto/backend/scripts/check-due-payments.sh
+
+# Para instalar no crontab:
+# 1. Abra o terminal: crontab -e
+# 2. Adicione a linha acima (ajustando o caminho)
+# 3. Salve e feche o editor
+# 4. Verifique com: crontab -l
