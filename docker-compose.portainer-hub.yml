@@ -20,6 +20,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dona-nice-app.rule=Host(`donanice.fluxora.space`)
+      - traefik.http.routers.dona-nice-app.entrypoints=websecure
+      - traefik.http.routers.dona-nice-app.tls=true
+      - traefik.http.routers.dona-nice-app.tls.certresolver=le
+      - traefik.http.services.dona-nice-app.loadbalancer.server.port=3001
+    networks:
+      - fluxora_net
 
 volumes:
   dona-nice-data:
@@ -28,5 +37,5 @@ volumes:
     driver: local
 
 networks:
-  default:
-    name: dona-nice-network
+  fluxora_net:
+    external: true
